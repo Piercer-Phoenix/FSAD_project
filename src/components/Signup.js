@@ -57,7 +57,8 @@ function Signup({ onSignup }) {
       password: formData.password,
       name: formData.name,
       createdAt: new Date().toISOString(),
-      profileData: getRoleSpecificData()
+      profileData: getRoleSpecificData(),
+      tickets: [] // Initialize empty tickets array for user
     };
 
     // Save to localStorage
@@ -98,6 +99,9 @@ function Signup({ onSignup }) {
 
   return (
     <div className="auth-container">
+      <button onClick={() => navigate('/')} className="back-home-btn">
+        ← Back to Home
+      </button>
       <div className="auth-card">
         <h2>Create Account</h2>
         <p className="auth-subtitle">Sign up as a:</p>

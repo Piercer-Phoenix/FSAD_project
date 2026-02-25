@@ -26,6 +26,9 @@ function Login({ onLogin }) {
 
   return (
     <div className="auth-container">
+      <button onClick={() => navigate('/')} className="back-home-btn">
+        ← Back to Home
+      </button>
       <div className="auth-card">
         <h2>Welcome Back</h2>
         <p className="auth-subtitle">Login to your account</p>

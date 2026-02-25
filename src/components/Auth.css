@@ -1,203 +1,31 @@
-/* components/Auth.css - Updated with creamy color scheme */
+/* Add to components/Auth.css */
+.back-home-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  padding: 10px 20px;
+  background: transparent;
+  color: #8b7355;
+  border: 2px solid #d4b08c;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  z-index: 10;
+}
+
+.back-home-btn:hover {
+  background: #f5e6d3;
+  transform: translateX(-5px);
+}
+
 .auth-container {
+  position: relative;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #fdf5e6 0%, #faebd7 100%);
   padding: 20px;
-}
-
-.auth-card {
-  background: #fff9f0;
-  border-radius: 20px;
-  padding: 40px;
-  width: 100%;
-  max-width: 500px;
-  box-shadow: 0 10px 40px rgba(210, 180, 140, 0.2);
-  border: 1px solid #f5e6d3;
-}
-
-.auth-card h2 {
-  margin: 0 0 10px;
-  color: #8b7355;
-  font-size: 32px;
-  font-weight: 600;
-  text-align: center;
-}
-
-.auth-subtitle {
-  color: #b8a07c;
-  margin-bottom: 30px;
-  text-align: center;
-  font-size: 16px;
-}
-
-.role-selector {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 30px;
-}
-
-.role-btn {
-  flex: 1;
-  padding: 12px;
-  border: 2px solid #eeddcc;
-  background: white;
-  border-radius: 12px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.3s;
-  color: #8b7355;
-  font-weight: 500;
-}
-
-.role-btn:hover {
-  background: #fdf5e6;
-  border-color: #d4b08c;
-}
-
-.role-btn.active {
-  background: #d4b08c;
-  color: white;
-  border-color: #d4b08c;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  color: #8b7355;
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 14px;
-  border: 2px solid #eeddcc;
-  border-radius: 12px;
-  font-size: 15px;
-  transition: all 0.3s;
-  background: white;
-  color: #5c4e3d;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #d4b08c;
-  box-shadow: 0 0 0 3px rgba(212, 176, 140, 0.1);
-}
-
-.form-group input::placeholder,
-.form-group textarea::placeholder {
-  color: #d9c9b8;
-}
-
-.auth-button {
-  width: 100%;
-  padding: 16px;
-  background: #d4b08c;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  margin-top: 10px;
-  letter-spacing: 0.5px;
-}
-
-.auth-button:hover {
-  background: #c9a17b;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(212, 176, 140, 0.3);
-}
-
-.auth-button:active {
-  transform: translateY(0);
-}
-
-.error-message {
-  background: #fff1f0;
-  color: #c76e6e;
-  padding: 12px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  border: 1px solid #ffcdd2;
-  font-size: 14px;
-  text-align: center;
-}
-
-.auth-footer {
-  text-align: center;
-  margin-top: 25px;
-  color: #b8a07c;
-  font-size: 15px;
-}
-
-.auth-footer a {
-  color: #d4b08c;
-  text-decoration: none;
-  font-weight: 600;
-  margin-left: 5px;
-  transition: color 0.3s;
-}
-
-.auth-footer a:hover {
-  color: #c9a17b;
-  text-decoration: underline;
-}
-
-/* Additional creamy accents */
-.auth-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
-  background: linear-gradient(90deg, #d4b08c, #f5e6d3, #d4b08c);
-  border-radius: 20px 20px 0 0;
-}
-
-.auth-card {
-  position: relative;
-  overflow: hidden;
-}
-
-/* Checkbox and radio styling if needed */
-.form-group input[type="checkbox"],
-.form-group input[type="radio"] {
-  width: auto;
-  margin-right: 10px;
-  accent-color: #d4b08c;
-}
-
-/* Select dropdown styling */
-.form-group select {
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4b08c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 15px center;
-  background-size: 15px;
-}
-
-/* Success message styling if needed */
-.success-message {
-  background: #f0f7e8;
-  color: #6b8e4c;
-  padding: 12px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  border: 1px solid #c5e0b4;
-  text-align: center;
 }

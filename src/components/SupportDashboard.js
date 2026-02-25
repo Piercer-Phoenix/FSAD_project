@@ -4,31 +4,57 @@ import './Dashboard.css';
 
 function SupportDashboard({ user, onLogout }) {
   const [tickets, setTickets] = useState([]);
-  const [newTicket, setNewTicket] = useState({ subject: '', message: '' });
 
-  // For demo purposes, create some sample tickets
   useEffect(() => {
-    const sampleTickets = [
-      { id: 1, user: 'John Doe', subject: 'Payment issue', status: 'open', priority: 'high' },
-      { id: 2, user: 'Jane Smith', subject: 'Professional not responding', status: 'in-progress', priority: 'medium' },
-      { id: 3, user: 'Bob Wilson', subject: 'Account access', status: 'resolved', priority: 'low' },
-    ];
-    setTickets(sampleTickets);
+    loadAllTickets();
   }, []);
 
-  const handleTicketSubmit = (e) => {
-    e.preventDefault();
-    const ticket = {
-      id: tickets.length + 1,
-      user: user.name,
-      subject: newTicket.subject,
-      message: newTicket.message,
-      status: 'open',
-      priority: 'medium',
-      createdAt: new Date().toISOString()
-    };
-    setTickets([ticket, ...tickets]);
-    setNewTicket({ subject: '', message: '' });
+  const loadAllTickets = () => {
+    // Get all users and collect their tickets
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const allTickets = [];
+    
+    users.forEach(u => {
+      if (u.tickets && u.tickets.length > 0) {
+        allTickets.push(...u.tickets.map(ticket => ({
+          ...ticket,
+          userEmail: u.email,
+          userRole: u.role
+        })));
+      }
+    });
+    
+    // Sort by date (newest first)
+    allTickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    setTickets(allTickets);
+  };
+
+  const updateTicketStatus = (ticketId, newStatus) => {
+    // Update ticket status in all users
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const updatedUsers = users.map(u => {
+      if (u.tickets) {
+        return {
+          ...u,
+          tickets: u.tickets.map(t => 
+            t.id === ticketId ? { ...t, status: newStatus } : t
+          )
+        };
+      }
+      return u;
+    });
+
+    localStorage.setItem('users', JSON.stringify(updatedUsers));
+    loadAllTickets(); // Reload tickets
+  };
+
+  const getPriorityClass = (priority) => {
+    switch(priority) {
+      case 'high': return 'priority-high';
+      case 'medium': return 'priority-medium';
+      case 'low': return 'priority-low';
+      default: return '';
+    }
   };
 
   return (
@@ -36,52 +62,70 @@ function SupportDashboard({ user, onLogout }) {
       <header className="dashboard-header">
         <h1>Customer Support Dashboard</h1>
         <div>
-          <span className="user-name">{user.name} (Support)</span>
+          <span className="user-name">🎧 {user.name} (Support)</span>
           <button onClick={onLogout} className="logout-btn">Logout</button>
         </div>
       </header>
 
       <div className="dashboard-content">
-        <div className="ticket-form-section">
-          <h2>Create New Ticket</h2>
-          <form onSubmit={handleTicketSubmit} className="ticket-form">
-            <input
-              type="text"
-              placeholder="Subject"
-              value={newTicket.subject}
-              onChange={(e) => setNewTicket({...newTicket, subject: e.target.value})}
-              required
-            />
-            <textarea
-              placeholder="Describe the issue..."
-              value={newTicket.message}
-              onChange={(e) => setNewTicket({...newTicket, message: e.target.value})}
-              required
-              rows="3"
-            />
-            <button type="submit">Create Ticket</button>
-          </form>
-        </div>
-
         <div className="tickets-section">
-          <h2>Support Tickets</h2>
+          <h2>All Support Tickets ({tickets.length})</h2>
           <div className="tickets-list">
-            {tickets.map(ticket => (
-              <div key={ticket.id} className={`ticket-card priority-${ticket.priority}`}>
-                <div className="ticket-header">
-                  <h3>{ticket.subject}</h3>
-                  <span className={`status-badge status-${ticket.status}`}>
-                    {ticket.status}
-                  </span>
+            {tickets.length === 0 ? (
+              <p className="no-tickets">No tickets yet</p>
+            ) : (
+              tickets.map(ticket => (
+                <div key={ticket.id} className={`ticket-card ${getPriorityClass(ticket.priority)}`}>
+                  <div className="ticket-header">
+                    <h3>{ticket.subject}</h3>
+                    <span className={`status-badge status-${ticket.status}`}>
+                      {ticket.status}
+                    </span>
+                  </div>
+                  <p className="ticket-user">
+                    <strong>From:</strong> {ticket.userName} ({ticket.userRole}) - {ticket.userEmail}
+                  </p>
+                  <p className="ticket-user">
+                    <strong>Priority:</strong> {ticket.priority}
+                  </p>
+                  <p className="ticket-user">
+                    <strong>Date:</strong> {new Date(ticket.createdAt).toLocaleString()}
+                  </p>
+                  {ticket.message && (
+                    <div className="ticket-message">
+                      <strong>Message:</strong>
+                      <p>{ticket.message}</p>
+                    </div>
+                  )}
+                  <div className="ticket-actions">
+                    {ticket.status === 'open' && (
+                      <>
+                        <button 
+                          onClick={() => updateTicketStatus(ticket.id, 'in-progress')}
+                          className="assign-btn"
+                        >
+                          Start Processing
+                        </button>
+                        <button 
+                          onClick={() => updateTicketStatus(ticket.id, 'resolved')}
+                          className="resolve-btn"
+                        >
+                          Mark Resolved
+                        </button>
+                      </>
+                    )}
+                    {ticket.status === 'in-progress' && (
+                      <button 
+                        onClick={() => updateTicketStatus(ticket.id, 'resolved')}
+                        className="resolve-btn"
+                      >
+                        Mark Resolved
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <p className="ticket-user"><strong>From:</strong> {ticket.user}</p>
-                {ticket.message && <p className="ticket-message">{ticket.message}</p>}
-                <div className="ticket-actions">
-                  <button className="resolve-btn">Mark Resolved</button>
-                  <button className="assign-btn">Assign to me</button>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

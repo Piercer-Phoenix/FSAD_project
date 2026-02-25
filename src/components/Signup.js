@@ -110,18 +110,21 @@ function Signup({ onSignup }) {
           <button 
             className={`role-btn ${role === 'user' ? 'active' : ''}`}
             onClick={() => setRole('user')}
+            type="button"
           >
             👤 User
           </button>
           <button 
             className={`role-btn ${role === 'professional' ? 'active' : ''}`}
             onClick={() => setRole('professional')}
+            type="button"
           >
             👔 Professional
           </button>
           <button 
             className={`role-btn ${role === 'support' ? 'active' : ''}`}
             onClick={() => setRole('support')}
+            type="button"
           >
             🎧 Support
           </button>
@@ -163,7 +166,8 @@ function Signup({ onSignup }) {
               value={formData.password}
               onChange={handleChange}
               required
-              placeholder="Create a password"
+              placeholder="Create a password (min. 6 characters)"
+              minLength="6"
             />
           </div>
 
@@ -176,6 +180,7 @@ function Signup({ onSignup }) {
               onChange={handleChange}
               required
               placeholder="Confirm your password"
+              minLength="6"
             />
           </div>
 
@@ -226,6 +231,8 @@ function Signup({ onSignup }) {
                   value={formData.experience}
                   onChange={handleChange}
                   placeholder="Years of experience"
+                  min="0"
+                  max="50"
                 />
               </div>
               <div className="form-group">
@@ -246,6 +253,8 @@ function Signup({ onSignup }) {
                   value={formData.hourlyRate}
                   onChange={handleChange}
                   placeholder="Your hourly rate"
+                  min="0"
+                  step="5"
                 />
               </div>
               <div className="form-group">
@@ -310,7 +319,7 @@ function Signup({ onSignup }) {
             </>
           )}
 
-          <button type="submit" className="auth-button">Sign Up</button>
+          <button type="submit" className="auth-button">Create Account</button>
         </form>
 
         <p className="auth-footer">

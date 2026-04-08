@@ -7,6 +7,7 @@ import Signup from './components/Signup';
 import UserDashboard from './components/UserDashboard';
 import ProfessionalDashboard from './components/ProfessionalDashboard';
 import SupportDashboard from './components/SupportDashboard';
+import AdminDashboard from './components/AdminDashboard';
 import './App.css';
 
 function App() {
@@ -16,7 +17,21 @@ function App() {
     // Check if user is logged in from localStorage
     const loggedInUser = localStorage.getItem('currentUser');
     if (loggedInUser) {
-      setCurrentUser(JSON.parse(loggedInUser));
+      try {
+        const user = JSON.parse(loggedInUser);
+        // Parse tickets if they're a string
+        if (user.tickets && typeof user.tickets === 'string') {
+          try {
+            user.tickets = JSON.parse(user.tickets);
+          } catch(e) {
+            user.tickets = [];
+          }
+        }
+        setCurrentUser(user);
+      } catch(e) {
+        console.error('Error parsing user:', e);
+        localStorage.removeItem('currentUser');
+      }
     }
   }, []);
 
@@ -34,6 +49,8 @@ function App() {
     if (!currentUser) return <Navigate to="/login" />;
     
     switch(currentUser.role) {
+      case 'admin':
+        return <AdminDashboard user={currentUser} onLogout={handleLogout} />;
       case 'user':
         return <UserDashboard user={currentUser} onLogout={handleLogout} />;
       case 'professional':

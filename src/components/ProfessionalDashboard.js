@@ -13,6 +13,7 @@ function ProfessionalDashboard({ user, onLogout }) {
     priority: 'medium'
   });
   const [userTickets, setUserTickets] = useState(user.tickets || []);
+  const [loading, setLoading] = useState(false);
 
   const handleEditChange = (e) => {
     setEditForm({
@@ -21,73 +22,82 @@ function ProfessionalDashboard({ user, onLogout }) {
     });
   };
 
-  const saveProfile = () => {
-    // Update user in localStorage
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const updatedUsers = users.map(u => {
-      if (u.id === user.id) {
-        return {
-          ...u,
-          profileData: editForm
-        };
+  const saveProfile = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8080/api/professionals/${user.id}/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editForm)
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update local state
+        setProfile(editForm);
+        setIsEditing(false);
+        
+        // Update user in localStorage
+        const updatedUser = {...user, profileData: editForm};
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        
+        alert('Profile updated successfully!');
+      } else {
+        alert('Failed to update profile: ' + data.message);
       }
-      return u;
-    });
-    
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
-    
-    // Update current user
-    user.profileData = editForm;
-    localStorage.setItem('currentUser', JSON.stringify(user));
-    
-    setProfile(editForm);
-    setIsEditing(false);
+    } catch (err) {
+      console.error('Update error:', err);
+      alert('Cannot connect to server. Make sure backend is running.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleTicketSubmit = (e) => {
+  const handleTicketSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     
-    // Create new ticket
-    const newTicket = {
-      id: Date.now().toString(),
-      userId: user.id,
-      userName: user.name,
-      userRole: user.role,
-      subject: ticketData.subject,
-      message: ticketData.message,
-      priority: ticketData.priority,
-      status: 'open',
-      createdAt: new Date().toISOString(),
-      responses: []
-    };
-
-    // Update user's tickets in localStorage
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const updatedUsers = users.map(u => {
-      if (u.id === user.id) {
-        return {
-          ...u,
-          tickets: [...(u.tickets || []), newTicket]
-        };
+    try {
+      const response = await fetch(`http://localhost:8080/api/users/${user.id}/tickets`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subject: ticketData.subject,
+          message: ticketData.message,
+          priority: ticketData.priority
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Refresh user data to get updated tickets
+        const userResponse = await fetch(`http://localhost:8080/api/users/${user.id}`);
+        const userData = await userResponse.json();
+        
+        if (userData.success) {
+          const updatedUser = userData.data;
+          localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+          setUserTickets(updatedUser.tickets || []);
+        }
+        
+        setShowTicketForm(false);
+        setTicketData({ subject: '', message: '', priority: 'medium' });
+        alert('Ticket raised successfully! Support team will respond soon.');
+      } else {
+        alert('Failed to create ticket: ' + data.message);
       }
-      return u;
-    });
-
-    // Update current user
-    const updatedCurrentUser = {
-      ...user,
-      tickets: [...(user.tickets || []), newTicket]
-    };
-
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
-    localStorage.setItem('currentUser', JSON.stringify(updatedCurrentUser));
-    
-    // Update state
-    setUserTickets([...userTickets, newTicket]);
-    setShowTicketForm(false);
-    setTicketData({ subject: '', message: '', priority: 'medium' });
-    
-    alert('Ticket raised successfully! Support team will respond soon.');
+    } catch (err) {
+      console.error('Ticket error:', err);
+      alert('Cannot connect to server. Make sure backend is running.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -95,7 +105,7 @@ function ProfessionalDashboard({ user, onLogout }) {
       <header className="dashboard-header">
         <h1>Professional Dashboard</h1>
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          <button onClick={() => setShowTicketForm(!showTicketForm)} className="support-btn">
+          <button onClick={() => setShowTicketForm(!showTicketForm)} className="support-btn" disabled={loading}>
             🎧 Raise a Ticket
           </button>
           <span className="user-name">👔 {user.name}</span>
@@ -118,6 +128,7 @@ function ProfessionalDashboard({ user, onLogout }) {
                     onChange={(e) => setTicketData({...ticketData, subject: e.target.value})}
                     required
                     placeholder="Brief summary of your issue"
+                    disabled={loading}
                   />
                 </div>
                 <div className="form-group">
@@ -128,6 +139,7 @@ function ProfessionalDashboard({ user, onLogout }) {
                     required
                     rows="4"
                     placeholder="Describe your issue in detail"
+                    disabled={loading}
                   />
                 </div>
                 <div className="form-group">
@@ -135,6 +147,7 @@ function ProfessionalDashboard({ user, onLogout }) {
                   <select
                     value={ticketData.priority}
                     onChange={(e) => setTicketData({...ticketData, priority: e.target.value})}
+                    disabled={loading}
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -142,8 +155,12 @@ function ProfessionalDashboard({ user, onLogout }) {
                   </select>
                 </div>
                 <div className="ticket-modal-actions">
-                  <button type="submit" className="submit-ticket-btn">Submit Ticket</button>
-                  <button type="button" onClick={() => setShowTicketForm(false)} className="cancel-ticket-btn">Cancel</button>
+                  <button type="submit" className="submit-ticket-btn" disabled={loading}>
+                    {loading ? 'Submitting...' : 'Submit Ticket'}
+                  </button>
+                  <button type="button" onClick={() => setShowTicketForm(false)} className="cancel-ticket-btn" disabled={loading}>
+                    Cancel
+                  </button>
                 </div>
               </form>
             </div>
@@ -176,7 +193,7 @@ function ProfessionalDashboard({ user, onLogout }) {
           <div className="section-header">
             <h2>Your Profile</h2>
             {!isEditing && (
-              <button onClick={() => setIsEditing(true)} className="edit-btn">
+              <button onClick={() => setIsEditing(true)} className="edit-btn" disabled={loading}>
                 Edit Profile
               </button>
             )}
@@ -191,6 +208,7 @@ function ProfessionalDashboard({ user, onLogout }) {
                   name="profession"
                   value={editForm.profession || ''}
                   onChange={handleEditChange}
+                  disabled={loading}
                 />
               </div>
               <div className="form-group">
@@ -200,6 +218,7 @@ function ProfessionalDashboard({ user, onLogout }) {
                   name="experience"
                   value={editForm.experience || ''}
                   onChange={handleEditChange}
+                  disabled={loading}
                 />
               </div>
               <div className="form-group">
@@ -210,6 +229,7 @@ function ProfessionalDashboard({ user, onLogout }) {
                   value={editForm.skills || ''}
                   onChange={handleEditChange}
                   placeholder="e.g., Plumbing, Electrical"
+                  disabled={loading}
                 />
               </div>
               <div className="form-group">
@@ -219,6 +239,7 @@ function ProfessionalDashboard({ user, onLogout }) {
                   name="hourlyRate"
                   value={editForm.hourlyRate || ''}
                   onChange={handleEditChange}
+                  disabled={loading}
                 />
               </div>
               <div className="form-group">
@@ -228,6 +249,7 @@ function ProfessionalDashboard({ user, onLogout }) {
                   name="location"
                   value={editForm.location || ''}
                   onChange={handleEditChange}
+                  disabled={loading}
                 />
               </div>
               <div className="form-group">
@@ -237,11 +259,16 @@ function ProfessionalDashboard({ user, onLogout }) {
                   name="phone"
                   value={editForm.phone || ''}
                   onChange={handleEditChange}
+                  disabled={loading}
                 />
               </div>
               <div className="form-actions">
-                <button onClick={saveProfile} className="save-btn">Save</button>
-                <button onClick={() => setIsEditing(false)} className="cancel-btn">Cancel</button>
+                <button onClick={saveProfile} className="save-btn" disabled={loading}>
+                  {loading ? 'Saving...' : 'Save'}
+                </button>
+                <button onClick={() => setIsEditing(false)} className="cancel-btn" disabled={loading}>
+                  Cancel
+                </button>
               </div>
             </div>
           ) : (

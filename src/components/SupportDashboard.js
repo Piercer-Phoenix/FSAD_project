@@ -4,48 +4,54 @@ import './Dashboard.css';
 
 function SupportDashboard({ user, onLogout }) {
   const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadAllTickets();
   }, []);
 
-  const loadAllTickets = () => {
-    // Get all users and collect their tickets
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const allTickets = [];
-    
-    users.forEach(u => {
-      if (u.tickets && u.tickets.length > 0) {
-        allTickets.push(...u.tickets.map(ticket => ({
-          ...ticket,
-          userEmail: u.email,
-          userRole: u.role
-        })));
+  const loadAllTickets = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8080/api/tickets');
+      const data = await response.json();
+      
+      if (data.success) {
+        setTickets(data.data);
+      } else {
+        console.error('Failed to load tickets:', data.message);
       }
-    });
-    
-    // Sort by date (newest first)
-    allTickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    setTickets(allTickets);
+    } catch (err) {
+      console.error('Error loading tickets:', err);
+      alert('Cannot connect to server. Make sure backend is running.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateTicketStatus = (ticketId, newStatus) => {
-    // Update ticket status in all users
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const updatedUsers = users.map(u => {
-      if (u.tickets) {
-        return {
-          ...u,
-          tickets: u.tickets.map(t => 
-            t.id === ticketId ? { ...t, status: newStatus } : t
-          )
-        };
+  const updateTicketStatus = async (ticketId, newStatus) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/tickets/${ticketId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Reload tickets to get updated status
+        await loadAllTickets();
+        alert(`Ticket status updated to ${newStatus}`);
+      } else {
+        alert('Failed to update ticket status: ' + data.message);
       }
-      return u;
-    });
-
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
-    loadAllTickets(); // Reload tickets
+    } catch (err) {
+      console.error('Error updating ticket:', err);
+      alert('Cannot connect to server. Make sure backend is running.');
+    }
   };
 
   const getPriorityClass = (priority) => {
@@ -71,7 +77,9 @@ function SupportDashboard({ user, onLogout }) {
         <div className="tickets-section">
           <h2>All Support Tickets ({tickets.length})</h2>
           <div className="tickets-list">
-            {tickets.length === 0 ? (
+            {loading ? (
+              <p className="no-tickets">Loading tickets...</p>
+            ) : tickets.length === 0 ? (
               <p className="no-tickets">No tickets yet</p>
             ) : (
               tickets.map(ticket => (
@@ -83,7 +91,7 @@ function SupportDashboard({ user, onLogout }) {
                     </span>
                   </div>
                   <p className="ticket-user">
-                    <strong>From:</strong> {ticket.userName} ({ticket.userRole}) - {ticket.userEmail}
+                    <strong>From:</strong> {ticket.userName} ({ticket.userRole})
                   </p>
                   <p className="ticket-user">
                     <strong>Priority:</strong> {ticket.priority}

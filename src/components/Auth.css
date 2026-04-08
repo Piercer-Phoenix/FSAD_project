@@ -325,3 +325,21 @@
 .auth-card {
   animation: slideUp 0.5s ease-out;
 }
+
+
+
+/* Add to Auth.css */
+.admin-note {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #f5e6d3;
+  text-align: center;
+}
+
+.admin-note small {
+  color: #b8a07c;
+  font-size: 12px;
+  background: #f5e6d3;
+  padding: 4px 8px;
+  border-radius: 20px;
+}

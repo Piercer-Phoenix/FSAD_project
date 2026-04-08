@@ -23,6 +23,7 @@ function Signup({ onSignup }) {
     department: ''
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -32,7 +33,7 @@ function Signup({ onSignup }) {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
@@ -40,34 +41,45 @@ function Signup({ onSignup }) {
       return;
     }
 
-    // Get existing users
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    
-    // Check if email already exists
-    if (users.some(u => u.email === formData.email)) {
-      setError('Email already registered');
-      return;
-    }
+    setLoading(true);
+    setError('');
 
-    // Create new user object based on role
-    const newUser = {
-      id: Date.now().toString(),
-      role,
+    // Prepare profile data based on role
+    const profileData = getRoleSpecificData();
+
+    const signupData = {
       email: formData.email,
       password: formData.password,
       name: formData.name,
-      createdAt: new Date().toISOString(),
-      profileData: getRoleSpecificData(),
-      tickets: [] // Initialize empty tickets array for user
+      role: role,
+      profileData: profileData
     };
 
-    // Save to localStorage
-    users.push(newUser);
-    localStorage.setItem('users', JSON.stringify(users));
-    
-    // Login the user
-    onSignup(newUser);
-    navigate('/dashboard');
+    try {
+      const response = await fetch('http://localhost:8080/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(signupData)
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Store user in localStorage for session
+        localStorage.setItem('currentUser', JSON.stringify(data.data));
+        onSignup(data.data);
+        navigate('/dashboard');
+      } else {
+        setError(data.message || 'Signup failed. Please try again.');
+      }
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError('Cannot connect to server. Make sure backend is running on http://localhost:8080');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getRoleSpecificData = () => {
@@ -111,6 +123,7 @@ function Signup({ onSignup }) {
             className={`role-btn ${role === 'user' ? 'active' : ''}`}
             onClick={() => setRole('user')}
             type="button"
+            disabled={loading}
           >
             👤 User
           </button>
@@ -118,6 +131,7 @@ function Signup({ onSignup }) {
             className={`role-btn ${role === 'professional' ? 'active' : ''}`}
             onClick={() => setRole('professional')}
             type="button"
+            disabled={loading}
           >
             👔 Professional
           </button>
@@ -125,6 +139,7 @@ function Signup({ onSignup }) {
             className={`role-btn ${role === 'support' ? 'active' : ''}`}
             onClick={() => setRole('support')}
             type="button"
+            disabled={loading}
           >
             🎧 Support
           </button>
@@ -143,6 +158,7 @@ function Signup({ onSignup }) {
               onChange={handleChange}
               required
               placeholder="Enter your full name"
+              disabled={loading}
             />
           </div>
 
@@ -155,6 +171,7 @@ function Signup({ onSignup }) {
               onChange={handleChange}
               required
               placeholder="Enter your email"
+              disabled={loading}
             />
           </div>
 
@@ -168,6 +185,7 @@ function Signup({ onSignup }) {
               required
               placeholder="Create a password (min. 6 characters)"
               minLength="6"
+              disabled={loading}
             />
           </div>
 
@@ -181,6 +199,7 @@ function Signup({ onSignup }) {
               required
               placeholder="Confirm your password"
               minLength="6"
+              disabled={loading}
             />
           </div>
 
@@ -195,6 +214,7 @@ function Signup({ onSignup }) {
                   value={formData.location}
                   onChange={handleChange}
                   placeholder="Your city/area"
+                  disabled={loading}
                 />
               </div>
               <div className="form-group">
@@ -205,6 +225,7 @@ function Signup({ onSignup }) {
                   value={formData.phone}
                   onChange={handleChange}
                   placeholder="Your contact number"
+                  disabled={loading}
                 />
               </div>
             </>
@@ -221,6 +242,7 @@ function Signup({ onSignup }) {
                   onChange={handleChange}
                   required
                   placeholder="e.g., Plumber, Electrician, Designer"
+                  disabled={loading}
                 />
               </div>
               <div className="form-group">
@@ -233,6 +255,7 @@ function Signup({ onSignup }) {
                   placeholder="Years of experience"
                   min="0"
                   max="50"
+                  disabled={loading}
                 />
               </div>
               <div className="form-group">
@@ -243,6 +266,7 @@ function Signup({ onSignup }) {
                   value={formData.skills}
                   onChange={handleChange}
                   placeholder="e.g., Plumbing, Electrical, Painting"
+                  disabled={loading}
                 />
               </div>
               <div className="form-group">
@@ -255,6 +279,7 @@ function Signup({ onSignup }) {
                   placeholder="Your hourly rate"
                   min="0"
                   step="5"
+                  disabled={loading}
                 />
               </div>
               <div className="form-group">
@@ -265,6 +290,7 @@ function Signup({ onSignup }) {
                   value={formData.location}
                   onChange={handleChange}
                   placeholder="Service area"
+                  disabled={loading}
                 />
               </div>
               <div className="form-group">
@@ -275,6 +301,7 @@ function Signup({ onSignup }) {
                   value={formData.phone}
                   onChange={handleChange}
                   placeholder="Contact number"
+                  disabled={loading}
                 />
               </div>
             </>
@@ -291,6 +318,7 @@ function Signup({ onSignup }) {
                   onChange={handleChange}
                   required
                   placeholder="Your employee ID"
+                  disabled={loading}
                 />
               </div>
               <div className="form-group">
@@ -299,6 +327,7 @@ function Signup({ onSignup }) {
                   name="department"
                   value={formData.department}
                   onChange={handleChange}
+                  disabled={loading}
                 >
                   <option value="">Select department</option>
                   <option value="technical">Technical Support</option>
@@ -314,12 +343,15 @@ function Signup({ onSignup }) {
                   value={formData.phone}
                   onChange={handleChange}
                   placeholder="Work contact number"
+                  disabled={loading}
                 />
               </div>
             </>
           )}
 
-          <button type="submit" className="auth-button">Create Account</button>
+          <button type="submit" className="auth-button" disabled={loading}>
+            {loading ? 'Creating Account...' : 'Create Account'}
+          </button>
         </form>
 
         <p className="auth-footer">

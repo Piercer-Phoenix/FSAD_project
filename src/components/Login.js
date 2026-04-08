@@ -7,20 +7,63 @@ function Login({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
     
-    // Get all users from localStorage
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const user = users.find(u => u.email === email && u.password === password);
-    
-    if (user) {
-      onLogin(user);
+    // Check if it's admin login first (hardcoded)
+    if (email === 'hi' && password === '1234') {
+      const adminUser = {
+        id: 'admin-001',
+        email: 'hi',
+        name: 'Administrator',
+        role: 'admin',
+        tickets: []
+      };
+      localStorage.setItem('currentUser', JSON.stringify(adminUser));
+      onLogin(adminUser);
       navigate('/dashboard');
-    } else {
-      setError('Invalid email or password');
+      setLoading(false);
+      return;
+    }
+    
+    // Regular user login via backend
+    try {
+      const response = await fetch('http://localhost:8080/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Parse tickets if they're a string
+        let userData = data.data;
+        if (userData.tickets && typeof userData.tickets === 'string') {
+          try {
+            userData.tickets = JSON.parse(userData.tickets);
+          } catch(e) {
+            userData.tickets = [];
+          }
+        }
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+        onLogin(userData);
+        navigate('/dashboard');
+      } else {
+        setError(data.message || 'Invalid email or password');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Cannot connect to server. Make sure backend is running on http://localhost:8080');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -37,13 +80,14 @@ function Login({ onLogin }) {
         
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Email</label>
+            <label>Email / Username</label>
             <input
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="Enter your email"
+              placeholder="Enter your email or username"
+              disabled={loading}
             />
           </div>
           
@@ -55,14 +99,21 @@ function Login({ onLogin }) {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="Enter your password"
+              disabled={loading}
             />
           </div>
           
-          <button type="submit" className="auth-button">Login</button>
+          <button type="submit" className="auth-button" disabled={loading}>
+            {loading ? 'Logging in...' : 'Login'}
+          </button>
         </form>
         
         <p className="auth-footer">
           Don't have an account? <Link to="/signup">Sign up</Link>
+        </p>
+        
+        <p className="admin-note">
+          <small>Admin login: hi / 1234</small>
         </p>
       </div>
     </div>

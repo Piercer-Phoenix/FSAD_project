@@ -892,3 +892,200 @@
     min-width: auto;
   }
 }
+
+
+
+
+/* ========== ADD THESE STYLES TO YOUR EXISTING Dashboard.css ========== */
+
+/* Profile Info Section (for UserDashboard) */
+.profile-info-section {
+  background: #fff9f0;
+  padding: 25px;
+  border-radius: 20px;
+  margin-bottom: 30px;
+  border: 1px solid #f5e6d3;
+  box-shadow: 0 5px 20px rgba(210, 180, 140, 0.1);
+}
+
+.profile-info-section h2 {
+  color: #8b7355;
+  margin: 0 0 20px 0;
+  font-size: 24px;
+}
+
+/* Full Tickets List (Modal) */
+.my-tickets-full-list {
+  max-height: 500px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.my-tickets-full-list .ticket-card {
+  background: white;
+  border: 2px solid #f5e6d3;
+  border-radius: 15px;
+  padding: 20px;
+  transition: all 0.3s;
+  margin: 0;
+}
+
+.my-tickets-full-list .ticket-card:hover {
+  border-color: #d4b08c;
+  transform: translateX(5px);
+}
+
+.ticket-message-preview {
+  color: #5c4e3d;
+  margin: 10px 0;
+  line-height: 1.5;
+  background: #fdf5e6;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+/* Edit Ticket Button */
+.edit-ticket-btn {
+  padding: 8px 20px;
+  background: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edit-ticket-btn:hover {
+  background: #138496;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(23, 162, 184, 0.3);
+}
+
+/* Responsive styles for modals */
+@media (max-width: 768px) {
+  .ticket-modal-content {
+    width: 95%;
+    max-width: 95%;
+    padding: 20px;
+    margin: 10px;
+  }
+  
+  .my-tickets-full-list {
+    max-height: 400px;
+  }
+  
+  .profile-info-section h2,
+  .my-tickets-section h2 {
+    font-size: 20px;
+  }
+  
+  .ticket-modal-actions {
+    flex-direction: column;
+  }
+  
+  .ticket-actions {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .ticket-modal-content {
+    padding: 15px;
+  }
+  
+  .ticket-card {
+    padding: 15px;
+  }
+  
+  .ticket-header h4 {
+    font-size: 14px;
+  }
+  
+  .ticket-message-preview {
+    font-size: 13px;
+  }
+  
+  .edit-ticket-btn,
+  .resolve-btn,
+  .assign-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+/* Scrollbar for tickets modal */
+.my-tickets-full-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.my-tickets-full-list::-webkit-scrollbar-track {
+  background: #f5e6d3;
+  border-radius: 10px;
+}
+
+.my-tickets-full-list::-webkit-scrollbar-thumb {
+  background: #d4b08c;
+  border-radius: 10px;
+}
+
+.my-tickets-full-list::-webkit-scrollbar-thumb:hover {
+  background: #c9a17b;
+}
+
+/* Animation for modals */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.ticket-modal-content {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Header button group spacing */
+.dashboard-header div {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Loading state for buttons */
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Status badge for tickets in modal */
+.ticket-card .status-badge {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+
+/* Priority border colors */
+.ticket-card.priority-high {
+  border-left: 4px solid #dc3545;
+}
+
+.ticket-card.priority-medium {
+  border-left: 4px solid #ffc107;
+}
+
+.ticket-card.priority-low {
+  border-left: 4px solid #28a745;
+}

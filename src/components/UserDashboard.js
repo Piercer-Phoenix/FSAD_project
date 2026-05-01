@@ -9,24 +9,42 @@ function UserDashboard({ user, onLogout }) {
   const [showTicketForm, setShowTicketForm] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [showAllTickets, setShowAllTickets] = useState(false);
+  const [showHireModal, setShowHireModal] = useState(false);
+  const [showHireStatus, setShowHireStatus] = useState(false);
+  const [selectedProfessional, setSelectedProfessional] = useState(null);
   const [editingTicket, setEditingTicket] = useState(null);
   const [ticketData, setTicketData] = useState({
     subject: '',
     message: '',
     priority: 'medium'
   });
+  const [hireData, setHireData] = useState({ 
+    message: '', 
+    startDate: '' 
+  });
   const [editTicketData, setEditTicketData] = useState({
     subject: '',
     message: ''
   });
   const [userTickets, setUserTickets] = useState([]);
-  const [profile, setProfile] = useState(user.profileData || {});
+  const [userHireRequests, setUserHireRequests] = useState([]);
+  const [profile, setProfile] = useState(() => {
+    if (user.profileData && typeof user.profileData === 'string') {
+      try {
+        return JSON.parse(user.profileData);
+      } catch(e) {
+        return user.profileData || {};
+      }
+    }
+    return user.profileData || {};
+  });
   const [editProfile, setEditProfile] = useState({...profile});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchProfessionals();
     fetchUserTickets();
+    fetchUserHireRequests();
   }, []);
 
   const fetchProfessionals = async () => {
@@ -53,6 +71,18 @@ function UserDashboard({ user, onLogout }) {
     }
   };
 
+  const fetchUserHireRequests = async () => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/users/${user.id}/hires`);
+      const data = await response.json();
+      if (data.success) {
+        setUserHireRequests(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching hire requests:', err);
+    }
+  };
+
   const updateProfile = async () => {
     setLoading(true);
     try {
@@ -67,7 +97,6 @@ function UserDashboard({ user, onLogout }) {
         setProfile(editProfile);
         setShowProfileEdit(false);
         
-        // Update user in localStorage
         const updatedUser = { ...user, profileData: editProfile };
         localStorage.setItem('currentUser', JSON.stringify(updatedUser));
         
@@ -116,6 +145,31 @@ function UserDashboard({ user, onLogout }) {
     }
   };
 
+  const hireProfessional = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8080/api/users/${user.id}/hire/${selectedProfessional.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(hireData)
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert('Hire request sent! Professional will respond soon.');
+        setShowHireModal(false);
+        setHireData({ message: '', startDate: '' });
+        await fetchUserHireRequests();
+      } else {
+        alert('Failed: ' + data.message);
+      }
+    } catch (err) {
+      alert('Cannot connect to server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updateTicket = async (ticketId) => {
     setLoading(true);
     try {
@@ -154,7 +208,14 @@ function UserDashboard({ user, onLogout }) {
   };
 
   const filteredProfessionals = professionals.filter(pro => {
-    const profileData = pro.profileData ? JSON.parse(pro.profileData) : {};
+    let profileData = {};
+    if (pro.profileData) {
+      try {
+        profileData = typeof pro.profileData === 'string' ? JSON.parse(pro.profileData) : pro.profileData;
+      } catch(e) {
+        profileData = {};
+      }
+    }
     const matchesSearch = pro.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          profileData?.profession?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || 
@@ -163,9 +224,17 @@ function UserDashboard({ user, onLogout }) {
   });
 
   const categories = ['all', ...new Set(professionals.map(p => {
-    const profileData = p.profileData ? JSON.parse(p.profileData) : {};
-    return profileData?.profession;
+    try {
+      const profileData = p.profileData ? (typeof p.profileData === 'string' ? JSON.parse(p.profileData) : p.profileData) : {};
+      return profileData?.profession;
+    } catch(e) {
+      return null;
+    }
   }).filter(Boolean))];
+
+  const pendingCount = userHireRequests.filter(h => h.status === 'pending').length;
+  const acceptedCount = userHireRequests.filter(h => h.status === 'accepted').length;
+  const rejectedCount = userHireRequests.filter(h => h.status === 'rejected').length;
 
   return (
     <div className="dashboard">
@@ -174,6 +243,9 @@ function UserDashboard({ user, onLogout }) {
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
           <button onClick={() => setShowProfileEdit(!showProfileEdit)} className="support-btn">
             ✏️ Edit Profile
+          </button>
+          <button onClick={() => setShowHireStatus(!showHireStatus)} className="support-btn">
+            📋 Hire Status {pendingCount > 0 && `(${pendingCount} pending)`}
           </button>
           <button onClick={() => setShowAllTickets(!showAllTickets)} className="support-btn">
             🎫 My Tickets ({userTickets.length})
@@ -187,6 +259,118 @@ function UserDashboard({ user, onLogout }) {
       </header>
 
       <div className="dashboard-content">
+        {/* Hire Modal */}
+        {showHireModal && selectedProfessional && (
+          <div className="ticket-modal">
+            <div className="ticket-modal-content">
+              <h3>Hire {selectedProfessional?.name}</h3>
+              {(() => {
+                let profileData = {};
+                if (selectedProfessional?.profileData) {
+                  try {
+                    profileData = typeof selectedProfessional.profileData === 'string' 
+                      ? JSON.parse(selectedProfessional.profileData) 
+                      : selectedProfessional.profileData;
+                  } catch(e) {}
+                }
+                return (
+                  <>
+                    <p><strong>Profession:</strong> {profileData?.profession || 'N/A'}</p>
+                    <p><strong>Hourly Rate:</strong> ${profileData?.hourlyRate || 'N/A'}/hr</p>
+                  </>
+                );
+              })()}
+              <form onSubmit={hireProfessional}>
+                <div className="form-group">
+                  <label>Start Date *</label>
+                  <input 
+                    type="date" 
+                    required 
+                    value={hireData.startDate}
+                    onChange={(e) => setHireData({...hireData, startDate: e.target.value})}
+                    disabled={loading}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Message *</label>
+                  <textarea 
+                    required 
+                    rows="4" 
+                    placeholder="Describe your requirements, project details, timeline, etc..."
+                    value={hireData.message}
+                    onChange={(e) => setHireData({...hireData, message: e.target.value})}
+                    disabled={loading}
+                  />
+                </div>
+                <div className="ticket-modal-actions">
+                  <button type="submit" className="submit-ticket-btn" disabled={loading}>
+                    {loading ? 'Sending...' : 'Send Hire Request'}
+                  </button>
+                  <button type="button" onClick={() => setShowHireModal(false)} className="cancel-ticket-btn">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Hire Status Modal */}
+        {showHireStatus && (
+          <div className="ticket-modal">
+            <div className="ticket-modal-content" style={{ maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
+              <h3>My Hire Requests</h3>
+              
+              {/* Status Summary */}
+              <div className="stats-grid" style={{ marginBottom: '20px', gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                <div className="stat-card" style={{ padding: '10px' }}>
+                  <h3>Pending</h3>
+                  <p className="stat-number" style={{ fontSize: '24px', color: '#ffc107' }}>{pendingCount}</p>
+                </div>
+                <div className="stat-card" style={{ padding: '10px' }}>
+                  <h3>Accepted</h3>
+                  <p className="stat-number" style={{ fontSize: '24px', color: '#28a745' }}>{acceptedCount}</p>
+                </div>
+                <div className="stat-card" style={{ padding: '10px' }}>
+                  <h3>Rejected</h3>
+                  <p className="stat-number" style={{ fontSize: '24px', color: '#dc3545' }}>{rejectedCount}</p>
+                </div>
+              </div>
+
+              {userHireRequests.length === 0 ? (
+                <p className="no-tickets">No hire requests sent yet</p>
+              ) : (
+                userHireRequests.map(req => (
+                  <div key={req.id} className="ticket-card" style={{ marginBottom: '15px' }}>
+                    <p><strong>Professional:</strong> {req.professionalName}</p>
+                    <p><strong>Start Date:</strong> {req.startDate}</p>
+                    <p><strong>Message:</strong> {req.message}</p>
+                    <p><strong>Status:</strong> 
+                      <span className={`status-badge status-${req.status}`} style={{ marginLeft: '8px' }}>
+                        {req.status === 'accepted' ? '✅ Accepted' : 
+                         req.status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
+                      </span>
+                    </p>
+                    {req.status === 'accepted' && (
+                      <p style={{ color: '#28a745', marginTop: '10px' }}>
+                        🎉 Your request was accepted! The professional will contact you soon.
+                      </p>
+                    )}
+                    {req.status === 'rejected' && (
+                      <p style={{ color: '#dc3545', marginTop: '10px' }}>
+                        😞 Your request was rejected. You can try hiring another professional.
+                      </p>
+                    )}
+                  </div>
+                ))
+              )}
+              <button onClick={() => setShowHireStatus(false)} className="submit-ticket-btn" style={{ marginTop: '20px' }}>
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Profile Edit Modal */}
         {showProfileEdit && (
           <div className="ticket-modal">
@@ -225,7 +409,7 @@ function UserDashboard({ user, onLogout }) {
         {/* All Tickets Modal */}
         {showAllTickets && (
           <div className="ticket-modal">
-            <div className="ticket-modal-content" style={{ maxWidth: '700px' }}>
+            <div className="ticket-modal-content" style={{ maxWidth: '700px', maxHeight: '80vh', overflowY: 'auto' }}>
               <h3>My Support Tickets</h3>
               <div className="my-tickets-full-list">
                 {userTickets.length === 0 ? (
@@ -382,7 +566,12 @@ function UserDashboard({ user, onLogout }) {
 
         <div className="professionals-grid">
           {filteredProfessionals.map(pro => {
-            const profileData = pro.profileData ? JSON.parse(pro.profileData) : {};
+            let profileData = {};
+            if (pro.profileData) {
+              try {
+                profileData = typeof pro.profileData === 'string' ? JSON.parse(pro.profileData) : pro.profileData;
+              } catch(e) {}
+            }
             return (
               <div key={pro.id} className="professional-card">
                 <div className="professional-header">
@@ -396,7 +585,15 @@ function UserDashboard({ user, onLogout }) {
                   <p><strong>Location:</strong> {profileData?.location || 'N/A'}</p>
                   <p><strong>Contact:</strong> {profileData?.phone || 'N/A'}</p>
                 </div>
-                <button className="hire-btn">Hire Now</button>
+                <button 
+                  onClick={() => {
+                    setSelectedProfessional(pro);
+                    setShowHireModal(true);
+                  }} 
+                  className="hire-btn"
+                >
+                  Hire Now
+                </button>
               </div>
             );
           })}

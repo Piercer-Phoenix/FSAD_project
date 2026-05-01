@@ -5,7 +5,6 @@ import './Dashboard.css';
 function ProfessionalDashboard({ user, onLogout }) {
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState(() => {
-    // Parse profileData if it's a string
     if (user.profileData && typeof user.profileData === 'string') {
       try {
         return JSON.parse(user.profileData);
@@ -18,6 +17,7 @@ function ProfessionalDashboard({ user, onLogout }) {
   const [editForm, setEditForm] = useState({...profile});
   const [showTicketForm, setShowTicketForm] = useState(false);
   const [showAllTickets, setShowAllTickets] = useState(false);
+  const [showHireRequests, setShowHireRequests] = useState(false);
   const [editingTicket, setEditingTicket] = useState(null);
   const [ticketData, setTicketData] = useState({
     subject: '',
@@ -29,7 +29,6 @@ function ProfessionalDashboard({ user, onLogout }) {
     message: ''
   });
   const [userTickets, setUserTickets] = useState(() => {
-    // Parse tickets if it's a string
     if (user.tickets && typeof user.tickets === 'string') {
       try {
         return JSON.parse(user.tickets);
@@ -39,10 +38,12 @@ function ProfessionalDashboard({ user, onLogout }) {
     }
     return user.tickets || [];
   });
+  const [hireRequests, setHireRequests] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchUserTickets();
+    fetchHireRequests();
   }, []);
 
   const fetchUserTickets = async () => {
@@ -57,9 +58,20 @@ function ProfessionalDashboard({ user, onLogout }) {
     }
   };
 
+  const fetchHireRequests = async () => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/professionals/${user.id}/hires`);
+      const data = await response.json();
+      if (data.success) {
+        setHireRequests(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching hire requests:', err);
+    }
+  };
+
   const handleEditChange = (e) => {
     let value = e.target.value;
-    // Handle skills as array
     if (e.target.name === 'skills') {
       value = value.split(',').map(s => s.trim());
     }
@@ -86,7 +98,6 @@ function ProfessionalDashboard({ user, onLogout }) {
         setProfile(editForm);
         setIsEditing(false);
         
-        // Update user in localStorage
         const updatedUser = {...user, profileData: editForm};
         localStorage.setItem('currentUser', JSON.stringify(updatedUser));
         
@@ -174,7 +185,29 @@ function ProfessionalDashboard({ user, onLogout }) {
     });
   };
 
-  // Handle skills display
+  const updateHireStatus = async (hireId, status) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8080/api/professionals/${user.id}/hires/${hireId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert(`Hire request ${status}`);
+        await fetchHireRequests();
+      } else {
+        alert('Error updating status');
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      alert('Cannot connect to server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const displaySkills = () => {
     if (profile.skills && Array.isArray(profile.skills)) {
       return profile.skills.join(', ');
@@ -185,11 +218,16 @@ function ProfessionalDashboard({ user, onLogout }) {
     return 'Not set';
   };
 
+  const pendingCount = hireRequests.filter(h => h.status === 'pending').length;
+
   return (
     <div className="dashboard">
       <header className="dashboard-header">
         <h1>Professional Dashboard</h1>
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button onClick={() => setShowHireRequests(!showHireRequests)} className="support-btn">
+            📋 Hire Requests {pendingCount > 0 && `(${pendingCount})`}
+          </button>
           <button onClick={() => setShowAllTickets(!showAllTickets)} className="support-btn">
             🎫 My Tickets ({userTickets.length})
           </button>
@@ -202,10 +240,48 @@ function ProfessionalDashboard({ user, onLogout }) {
       </header>
 
       <div className="dashboard-content">
+        {/* Hire Requests Modal */}
+        {showHireRequests && (
+          <div className="ticket-modal">
+            <div className="ticket-modal-content" style={{ maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
+              <h3>Hire Requests ({hireRequests.length})</h3>
+              {hireRequests.length === 0 ? (
+                <p className="no-tickets">No hire requests yet</p>
+              ) : (
+                hireRequests.map(req => (
+                  <div key={req.id} className="ticket-card" style={{ marginBottom: '15px' }}>
+                    <p><strong>From:</strong> {req.userName}</p>
+                    <p><strong>Start Date:</strong> {req.startDate}</p>
+                    <p><strong>Message:</strong> {req.message}</p>
+                    <p><strong>Status:</strong> 
+                      <span className={`status-badge status-${req.status}`} style={{ marginLeft: '8px' }}>
+                        {req.status}
+                      </span>
+                    </p>
+                    {req.status === 'pending' && (
+                      <div className="ticket-actions" style={{ marginTop: '15px' }}>
+                        <button onClick={() => updateHireStatus(req.id, 'accepted')} className="resolve-btn" disabled={loading}>
+                          ✓ Accept
+                        </button>
+                        <button onClick={() => updateHireStatus(req.id, 'rejected')} className="cancel-ticket-btn" disabled={loading}>
+                          ✗ Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+              <button onClick={() => setShowHireRequests(false)} className="submit-ticket-btn" style={{ marginTop: '20px' }}>
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* All Tickets Modal */}
         {showAllTickets && (
           <div className="ticket-modal">
-            <div className="ticket-modal-content" style={{ maxWidth: '700px' }}>
+            <div className="ticket-modal-content" style={{ maxWidth: '700px', maxHeight: '80vh', overflowY: 'auto' }}>
               <h3>My Support Tickets</h3>
               <div className="my-tickets-full-list">
                 {userTickets.length === 0 ? (
@@ -429,7 +505,11 @@ function ProfessionalDashboard({ user, onLogout }) {
             </div>
             <div className="stat-card">
               <h3>Total Hires</h3>
-              <p className="stat-number">0</p>
+              <p className="stat-number">{hireRequests.filter(h => h.status === 'accepted').length}</p>
+            </div>
+            <div className="stat-card">
+              <h3>Pending Requests</h3>
+              <p className="stat-number">{pendingCount}</p>
             </div>
             <div className="stat-card">
               <h3>Rating</h3>
